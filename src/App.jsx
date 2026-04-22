@@ -281,15 +281,16 @@ function ScholarshipCard({ scholarship, onGenerateOutline, disabled }) {
 
 const STATUS_CYCLE = { 'Not Started': 'In Progress', 'In Progress': 'Submitted', 'Submitted': 'Not Started' }
 
-function OutlineCard({ outline, onStatusChange, onDelete }) {
-  const [open, setOpen] = useState(true)
+function OutlineCard({ outline, onStatusChange, onDelete, onRewrite, onExpandDraft, genLoading }) {
+  const [open, setOpen]           = useState(true)
+  const [draftOpen, setDraftOpen] = useState(true)
 
   return (
     <div style={{
       background: C.card, border: `1px solid ${C.border}`,
       borderRadius: 12, marginBottom: 12, overflow: 'hidden',
     }}>
-      {/* Card header (clickable to collapse) */}
+      {/* ── Card header ── */}
       <div
         onClick={() => setOpen(o => !o)}
         style={{
@@ -313,7 +314,6 @@ function OutlineCard({ outline, onStatusChange, onDelete }) {
           </div>
         </div>
 
-        {/* Status + delete — stop propagation so clicks don't toggle collapse */}
         <div
           style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}
           onClick={e => e.stopPropagation()}
@@ -336,17 +336,83 @@ function OutlineCard({ outline, onStatusChange, onDelete }) {
         </div>
       </div>
 
-      {/* Outline body */}
+      {/* ── Outline body ── */}
       {open && (
-        <div style={{ padding: '18px 20px', overflowX: 'auto' }}>
-          <pre style={{
-            margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 13, lineHeight: 1.75, color: C.text,
+        <>
+          <div style={{ padding: '18px 20px 12px', overflowX: 'auto' }}>
+            <pre style={{
+              margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: 13, lineHeight: 1.75, color: C.text,
+            }}>
+              {outline.outline}
+            </pre>
+          </div>
+
+          {/* ── Action buttons ── */}
+          <div style={{
+            display: 'flex', gap: 8, padding: '12px 20px 16px',
+            borderTop: `1px solid ${C.border}`,
           }}>
-            {outline.outline}
-          </pre>
-        </div>
+            <button
+              onClick={() => onRewrite(outline)}
+              disabled={genLoading}
+              style={{
+                background: 'transparent',
+                color: genLoading ? C.textDim : C.textMuted,
+                border: `1px solid ${C.border}`,
+                borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 500,
+                cursor: genLoading ? 'not-allowed' : 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+              }}
+            >
+              ↺ Rewrite Outline
+            </button>
+            <button
+              onClick={() => onExpandDraft(outline)}
+              disabled={genLoading}
+              style={{
+                background: genLoading ? C.accentDim : 'rgba(59,130,246,0.12)',
+                color: genLoading ? C.textDim : C.accent,
+                border: `1px solid ${genLoading ? C.border : 'rgba(59,130,246,0.35)'}`,
+                borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 600,
+                cursor: genLoading ? 'not-allowed' : 'pointer',
+                fontFamily: "'Outfit', sans-serif",
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {genLoading ? <><Spinner size={12} color={C.textDim} /> Working…</> : '✦ Expand to Draft'}
+            </button>
+          </div>
+
+          {/* ── Saved draft ── */}
+          {outline.draft && (
+            <div style={{ borderTop: `1px solid ${C.border}` }}>
+              <div
+                onClick={() => setDraftOpen(o => !o)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '11px 20px', cursor: 'pointer', userSelect: 'none',
+                  background: 'rgba(59,130,246,0.05)',
+                }}
+              >
+                <span style={{ color: C.textDim, fontSize: 10 }}>{draftOpen ? '▼' : '▶'}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.accent }}>Full Draft</span>
+              </div>
+              {draftOpen && (
+                <div style={{ padding: '16px 20px 20px' }}>
+                  <pre style={{
+                    margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 13, lineHeight: 1.8, color: C.text,
+                  }}>
+                    {outline.draft}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -364,6 +430,7 @@ export default function App() {
   const [analyzeError, setAnalyzeError]   = useState('')
   const [activeTab, setActiveTab]         = useState('analyze')
   const [genLoading, setGenLoading]       = useState(false)
+  const [genType, setGenType]             = useState('outline') // 'outline' | 'draft'
   const [outlineStream, setOutlineStream] = useState('')
   const [outlineError, setOutlineError]   = useState('')
   const [activeScholarship, setActiveScholarship] = useState(null)
@@ -411,39 +478,22 @@ export default function App() {
   // ── Generate outline ───────────────────────────────────────────────────────
   const generateOutline = useCallback(async scholarship => {
     if (!apiKey.trim()) { setOutlineError('Enter your OpenRouter API key in the header.'); return }
-    setGenLoading(true); setOutlineError(''); setOutlineStream('')
+    setGenLoading(true); setGenType('outline'); setOutlineError(''); setOutlineStream('')
     setActiveScholarship(scholarship); setActiveTab('outlines')
     try {
       const prompt =
-        'Create a 5-section essay outline to help a student plan their scholarship application.\n\n' +
+        'Write a brief planning outline for a scholarship essay — ' +
+        'the kind of notes a writing coach would hand a student before they start drafting.\n\n' +
         `Scholarship: ${scholarship.name}\n` +
-        `Amount: ${scholarship.amount}\n` +
-        `Deadline: ${scholarship.deadline}\n` +
-        `Requirements: ${scholarship.requirements?.join(', ') || 'Not specified'}\n` +
-        `Fit reason: ${scholarship.fitReason}\n\n` +
-        'This outline is a planning tool — a guide for the student to write from, not a draft of the essay itself. ' +
-        'Each bullet should name what to cover and which personal detail to draw on as supporting evidence. ' +
-        'Do not write sentences that belong in the essay. Do not pre-write content.\n\n' +
-        'Use this structure:\n\n' +
-        '## Hook\n' +
-        '- What opening angle to take\n' +
-        '- Which personal detail anchors it\n\n' +
-        '## Background\n' +
-        '- What narrative thread to establish\n' +
-        '- Which life/family experiences to reference\n\n' +
-        '## Skills & Experience\n' +
-        '- Which skills and projects are most relevant to this scholarship\n' +
-        '- How to frame them as evidence, not just a list\n\n' +
-        '## Goals\n' +
-        '- What short- and long-term goals to articulate\n' +
-        '- How to connect them to the student\'s background\n\n' +
-        '## Why This Scholarship\n' +
-        '- What specific alignment to highlight\n' +
-        '- What concrete next step the award enables\n\n' +
-        'Available background details to pull from where relevant: first-gen American (parents immigrated), ' +
-        'trades background (CNC machining, sign fabrication, large-format printing), ' +
-        'technical skills (SolidWorks, Python, electronics), independent builds, ' +
-        'BCCC engineering student planning to transfer, works full-time in fabrication while studying.'
+        `What it funds / who it targets: ${scholarship.requirements?.join(', ') || 'Not specified'}\n` +
+        `Why this student is a good fit: ${scholarship.fitReason}\n\n` +
+        'Guidelines:\n' +
+        '- Let what THIS scholarship values drive the structure and emphasis. Different scholarships should produce meaningfully different outlines.\n' +
+        '- Each bullet tells the student what to address and what category of experience to draw on — not what to say.\n' +
+        '- Keep bullets short and directional (e.g. "open with a moment of transition", "establish the family context that motivates the goal").\n' +
+        '- Do not write essay sentences, example lines, or quote the student profile directly.\n' +
+        '- 2–4 bullets per section is enough.\n\n' +
+        'Sections: Hook / Background / Skills & Experience / Goals / Why This Scholarship'
 
       const full = await streamOpenRouter(
         apiKey,
@@ -455,19 +505,63 @@ export default function App() {
 
       setSavedOutlines(prev => {
         const entry = {
-          id:                  `${scholarship.id}-${Date.now()}`,
-          scholarshipId:       scholarship.id,
-          scholarshipName:     scholarship.name,
-          scholarshipAmount:   scholarship.amount,
-          outline:             cleaned,
-          status:              'Not Started',
+          id:               `${scholarship.id}-${Date.now()}`,
+          scholarshipId:    scholarship.id,
+          scholarshipName:  scholarship.name,
+          scholarshipAmount: scholarship.amount,
+          scholarshipData:  scholarship,
+          outline:          cleaned,
+          draft:            null,
+          status:           'Not Started',
         }
         const idx = prev.findIndex(o => o.scholarshipId === scholarship.id)
         if (idx >= 0) {
-          const next = [...prev]; next[idx] = { ...next[idx], outline: cleaned }; return next
+          const next = [...prev]; next[idx] = { ...next[idx], outline: cleaned, draft: null }; return next
         }
         return [...prev, entry]
       })
+    } catch (e) {
+      setOutlineError(e.message)
+    } finally {
+      setGenLoading(false)
+    }
+  }, [apiKey])
+
+  // ── Rewrite outline (called from OutlineCard) ──────────────────────────────
+  const rewriteOutline = useCallback(outline => {
+    const scholarship = outline.scholarshipData || {
+      id: outline.scholarshipId, name: outline.scholarshipName,
+      amount: outline.scholarshipAmount, deadline: 'Unknown',
+      requirements: [], fitReason: '',
+    }
+    generateOutline(scholarship)
+  }, [generateOutline])
+
+  // ── Expand to draft ────────────────────────────────────────────────────────
+  const generateDraft = useCallback(async outline => {
+    if (!apiKey.trim()) { setOutlineError('Enter your OpenRouter API key in the header.'); return }
+    setGenLoading(true); setGenType('draft'); setOutlineError(''); setOutlineStream('')
+    setActiveScholarship({ name: outline.scholarshipName, amount: outline.scholarshipAmount })
+    setActiveTab('outlines')
+    try {
+      const prompt =
+        `Write a full first-person scholarship essay draft based on the outline below.\n\n` +
+        `Scholarship: ${outline.scholarshipName}\n` +
+        `Amount: ${outline.scholarshipAmount}\n\n` +
+        `Outline:\n${outline.outline}\n\n` +
+        'Write 4–6 paragraphs. Use the student profile from your system prompt as raw material — ' +
+        'weave in relevant experiences naturally where they support the argument. ' +
+        'Do not list credentials. Tell a story. ' +
+        'Tone: genuine, grounded, and specific to this student — not generic scholarship-essay language.'
+
+      const full = await streamOpenRouter(
+        apiKey,
+        [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: prompt }],
+        chunk => setOutlineStream(stripThinkTags(chunk))
+      )
+      const cleaned = stripThinkTags(full)
+      setOutlineStream(cleaned)
+      setSavedOutlines(prev => prev.map(o => o.id === outline.id ? { ...o, draft: cleaned } : o))
     } catch (e) {
       setOutlineError(e.message)
     } finally {
@@ -709,7 +803,9 @@ export default function App() {
                       letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 3,
                       color: genLoading ? C.accent : C.green,
                     }}>
-                      {genLoading ? 'Generating Outline…' : 'Outline Complete — saved below ↓'}
+                      {genLoading
+                        ? (genType === 'draft' ? 'Expanding to Draft…' : 'Generating Outline…')
+                        : (genType === 'draft' ? 'Draft Complete — saved below ↓' : 'Outline Complete — saved below ↓')}
                     </div>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>{activeScholarship.name}</div>
                   </div>
@@ -736,6 +832,9 @@ export default function App() {
                     outline={o}
                     onStatusChange={updateStatus}
                     onDelete={deleteOutline}
+                    onRewrite={rewriteOutline}
+                    onExpandDraft={generateDraft}
+                    genLoading={genLoading}
                   />
                 ))
               : !genLoading && (

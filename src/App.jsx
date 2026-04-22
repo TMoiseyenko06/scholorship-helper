@@ -415,32 +415,35 @@ export default function App() {
     setActiveScholarship(scholarship); setActiveTab('outlines')
     try {
       const prompt =
-        'Generate a detailed 5-section bullet-point essay outline for this scholarship application.\n\n' +
+        'Create a 5-section essay outline to help a student plan their scholarship application.\n\n' +
         `Scholarship: ${scholarship.name}\n` +
         `Amount: ${scholarship.amount}\n` +
         `Deadline: ${scholarship.deadline}\n` +
         `Requirements: ${scholarship.requirements?.join(', ') || 'Not specified'}\n` +
         `Fit reason: ${scholarship.fitReason}\n\n` +
-        'Use EXACTLY this structure with ## section headers:\n\n' +
-        '## Hook\n- [compelling, specific opening angle for this scholarship]\n\n' +
+        'This outline is a planning tool — a guide for the student to write from, not a draft of the essay itself. ' +
+        'Each bullet should name what to cover and which personal detail to draw on as supporting evidence. ' +
+        'Do not write sentences that belong in the essay. Do not pre-write content.\n\n' +
+        'Use this structure:\n\n' +
+        '## Hook\n' +
+        '- What opening angle to take\n' +
+        '- Which personal detail anchors it\n\n' +
         '## Background\n' +
-        '- [first-gen American family story — parents who immigrated for their children]\n' +
-        '- [how the trades were the natural starting point, not a detour]\n' +
-        '- [the moment that sparked the pivot toward engineering]\n\n' +
+        '- What narrative thread to establish\n' +
+        '- Which life/family experiences to reference\n\n' +
         '## Skills & Experience\n' +
-        '- [CNC machining, sign fabrication, large-format printing — cite real shop context]\n' +
-        '- [SolidWorks CAD, Python scripting, electronics/hardware builds]\n' +
-        '- [independent machines or devices built outside of school — be specific]\n\n' +
+        '- Which skills and projects are most relevant to this scholarship\n' +
+        '- How to frame them as evidence, not just a list\n\n' +
         '## Goals\n' +
-        '- [BCCC engineering program structure and transfer plan to 4-year university]\n' +
-        '- [how fabrication trades and digital engineering converge into a career]\n' +
-        '- [long-term engineering vision — what problem or industry do you want to impact]\n\n' +
+        '- What short- and long-term goals to articulate\n' +
+        '- How to connect them to the student\'s background\n\n' +
         '## Why This Scholarship\n' +
-        '- [specific alignment with this scholarship\'s stated mission or values]\n' +
-        '- [how the award removes a concrete barrier and enables a specific next step]\n\n' +
-        'Be concrete and specific. Reference the student\'s strongest angles: first-gen American, ' +
-        'trades-to-engineering pathway, hands-on maker identity, BCCC → 4-year transfer, ' +
-        'working full-time in fabrication while studying.'
+        '- What specific alignment to highlight\n' +
+        '- What concrete next step the award enables\n\n' +
+        'Available background details to pull from where relevant: first-gen American (parents immigrated), ' +
+        'trades background (CNC machining, sign fabrication, large-format printing), ' +
+        'technical skills (SolidWorks, Python, electronics), independent builds, ' +
+        'BCCC engineering student planning to transfer, works full-time in fabrication while studying.'
 
       const full = await streamOpenRouter(
         apiKey,

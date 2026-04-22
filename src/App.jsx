@@ -1,7 +1,7 @@
 // Gemma 4 26B via OpenRouter — free tier, strong instruction-following performance,
 // cost-effective for scholarship analysis and essay outline generation
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 const SYSTEM_PROMPT = `You are a scholarship advisor helping a specific student evaluate and apply for scholarships.
 
@@ -421,9 +421,11 @@ function OutlineCard({ outline, onStatusChange, onDelete, onRewrite, onExpandDra
 // ─── App ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [apiKey, setApiKey]               = useState('')
+  const [apiKey, setApiKey]               = useState(import.meta.env.VITE_OPENROUTER_KEY || '')
   const [pasteText, setPasteText]         = useState('')
-  const [scholarships, setScholarships]   = useState([])
+  const [scholarships, setScholarships]   = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sa_scholarships') || '[]') } catch { return [] }
+  })
   const [sortMode, setSortMode]           = useState('score')
   const [streamPreview, setStreamPreview] = useState('')
   const [analyzing, setAnalyzing]         = useState(false)
@@ -434,7 +436,12 @@ export default function App() {
   const [outlineStream, setOutlineStream] = useState('')
   const [outlineError, setOutlineError]   = useState('')
   const [activeScholarship, setActiveScholarship] = useState(null)
-  const [savedOutlines, setSavedOutlines] = useState([])
+  const [savedOutlines, setSavedOutlines] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sa_outlines') || '[]') } catch { return [] }
+  })
+
+  useEffect(() => { localStorage.setItem('sa_scholarships', JSON.stringify(scholarships)) }, [scholarships])
+  useEffect(() => { localStorage.setItem('sa_outlines',     JSON.stringify(savedOutlines)) }, [savedOutlines])
 
   const sorted = [...scholarships].sort((a, b) =>
     sortMode === 'score' ? b.fitScore - a.fitScore : a.name.localeCompare(b.name)

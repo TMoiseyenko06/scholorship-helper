@@ -1,4 +1,4 @@
-// DeepSeek R1 0528 via OpenRouter — free tier, strong academic/reasoning performance,
+// Gemma 4 26B via OpenRouter — free tier, strong instruction-following performance,
 // cost-effective for scholarship analysis and essay outline generation
 
 import { useState, useCallback } from 'react'
@@ -24,7 +24,7 @@ Strongest application angles:
 6. Pennsylvania state residency`
 
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL   = 'deepseek/deepseek-r1-0528:free'
+const MODEL   = 'google/gemma-4-26b-it:free'
 
 // Strip <think>...</think> blocks; also removes unclosed <think> tails during streaming
 function stripThinkTags(text) {
@@ -500,7 +500,7 @@ export default function App() {
             Scholarship Assistant
           </h1>
           <p style={{ margin: 0, fontSize: 12, color: C.textDim, marginTop: 2 }}>
-            DeepSeek R1 · OpenRouter · Built for BCCC Engineering
+            Gemma 4 · OpenRouter · Built for BCCC Engineering
           </p>
         </div>
         <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />

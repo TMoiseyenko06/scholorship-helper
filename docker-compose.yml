@@ -2,21 +2,5 @@ services:
   app:
     build: .
     ports:
-      - "8080:80"   # also accessible locally at http://localhost:8080
+      - "8080:80"
     restart: unless-stopped
-
-  tunnel:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    depends_on:
-      - app
-    # Quick tunnel (no account needed) — random *.trycloudflare.com URL, changes on restart
-    # Run: docker compose logs tunnel   to see the URL
-    #
-    # For a STABLE custom domain (free Cloudflare account):
-    #   1. Go to https://one.dash.cloudflare.com → Networks → Tunnels → Create tunnel
-    #   2. Copy the token, add to .env:  CLOUDFLARE_TUNNEL_TOKEN=eyJ...
-    #   3. Switch the command below to:  tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    command: tunnel --no-autoupdate --url http://app:80
-    environment:
-      - NO_AUTOUPDATE=true

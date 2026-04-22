@@ -24,7 +24,7 @@ Strongest application angles:
 6. Pennsylvania state residency`
 
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions'
-const MODEL   = 'google/gemma-4-26b-it:free'
+const MODEL   = 'google/gemma-4-26b-a4b-it'
 
 // Strip <think>...</think> blocks; also removes unclosed <think> tails during streaming
 function stripThinkTags(text) {

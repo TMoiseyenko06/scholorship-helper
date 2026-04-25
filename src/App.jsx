@@ -185,7 +185,7 @@ function StatusBadge({ status, onClick }) {
 
 // ─── ScholarshipCard ─────────────────────────────────────────────────────────
 
-function ScholarshipCard({ scholarship, onGenerateOutline, disabled }) {
+function ScholarshipCard({ scholarship, onGenerateOutline, onDelete, disabled }) {
   const [reqOpen, setReqOpen] = useState(false)
 
   return (
@@ -226,22 +226,36 @@ function ScholarshipCard({ scholarship, onGenerateOutline, disabled }) {
           </p>
         </div>
 
-        {/* Generate outline button */}
-        <button
-          onClick={() => onGenerateOutline(scholarship)}
-          disabled={disabled}
-          style={{
-            background: disabled ? C.accentDim : C.accent,
-            color: '#fff', border: 'none', borderRadius: 8,
-            padding: '9px 16px', fontSize: 13, fontWeight: 600,
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            fontFamily: "'Outfit', sans-serif",
-            whiteSpace: 'nowrap', flexShrink: 0,
-            display: 'flex', alignItems: 'center', gap: 7,
-          }}
-        >
-          {disabled ? <><Spinner size={13} /> Generating…</> : 'Generate Outline'}
-        </button>
+        {/* Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={() => onGenerateOutline(scholarship)}
+            disabled={disabled}
+            style={{
+              background: disabled ? C.accentDim : C.accent,
+              color: '#fff', border: 'none', borderRadius: 8,
+              padding: '9px 16px', fontSize: 13, fontWeight: 600,
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              fontFamily: "'Outfit', sans-serif",
+              whiteSpace: 'nowrap',
+              display: 'flex', alignItems: 'center', gap: 7,
+            }}
+          >
+            {disabled ? <><Spinner size={13} /> Generating…</> : 'Generate Outline'}
+          </button>
+          <button
+            onClick={() => onDelete(scholarship.id)}
+            style={{
+              background: 'none', border: `1px solid ${C.border}`,
+              color: C.textDim, borderRadius: 8,
+              padding: '6px 16px', fontSize: 12,
+              cursor: 'pointer', fontFamily: "'Outfit', sans-serif",
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {/* Requirements accordion */}
@@ -454,7 +468,7 @@ export default function App() {
   const analyzeScholarships = useCallback(async () => {
     if (!apiKey.trim()) { setAnalyzeError('Enter your OpenRouter API key in the header.'); return }
     if (!pasteText.trim()) { setAnalyzeError('Paste some scholarship listings first.'); return }
-    setAnalyzing(true); setAnalyzeError(''); setStreamPreview(''); setScholarships([])
+    setAnalyzing(true); setAnalyzeError(''); setStreamPreview('')
     try {
       const prompt =
         'Parse the scholarship listings below. Return ONLY a raw JSON array — no markdown, no code fences, no <think> tags.\n' +
@@ -480,7 +494,12 @@ export default function App() {
       const parsed = JSON.parse(match[0])
       if (!Array.isArray(parsed) || parsed.length === 0)
         throw new Error('No scholarships detected in the pasted text.')
-      setScholarships(parsed)
+      // Merge: append new scholarships, skip any whose name already exists
+      setScholarships(prev => {
+        const existing = new Set(prev.map(s => s.name.trim().toLowerCase()))
+        const fresh = parsed.filter(s => !existing.has(s.name.trim().toLowerCase()))
+        return [...prev, ...fresh]
+      })
     } catch (e) {
       setAnalyzeError(e.message)
     } finally {
@@ -581,6 +600,9 @@ export default function App() {
       setGenLoading(false)
     }
   }, [apiKey])
+
+  const deleteScholarship = useCallback(id =>
+    setScholarships(prev => prev.filter(s => s.id !== id)), [])
 
   const updateStatus  = useCallback((id, status) =>
     setSavedOutlines(prev => prev.map(o => o.id === id ? { ...o, status } : o)), [])
@@ -698,7 +720,7 @@ export default function App() {
               </button>
               {scholarships.length > 0 && !analyzing && (
                 <span style={{ fontSize: 13, color: C.textDim }}>
-                  {scholarships.length} scholarships ranked — re-paste to refresh
+                  {scholarships.length} saved — paste more to add
                 </span>
               )}
             </div>
@@ -760,6 +782,7 @@ export default function App() {
                     key={s.id}
                     scholarship={s}
                     onGenerateOutline={generateOutline}
+                    onDelete={deleteScholarship}
                     disabled={genLoading}
                   />
                 ))}

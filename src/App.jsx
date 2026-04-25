@@ -460,7 +460,13 @@ export default function App() {
         'Parse the scholarship listings below. Return ONLY a raw JSON array — no markdown, no code fences, no <think> tags.\n' +
         'Each object must have: { "id": string, "name": string, "amount": string, "deadline": string,\n' +
         '"requirements": string[], "fitScore": number 1-10, "fitReason": string (2-3 sentences), "source": string }\n' +
-        'Sort by fitScore descending. Evaluate fit against the student profile in your system prompt.\n\n' +
+        'Sort by fitScore descending.\n\n' +
+        'Scoring rules — evaluate fit using the FULL student profile, not just the STEM/engineering parts:\n' +
+        '- Technical/STEM scholarships: score on engineering, trades, SolidWorks, Python, maker background\n' +
+        '- Community/social issue scholarships: score on first-gen American background, immigrant family story, perseverance, community ties — these are strong angles regardless of the scholarship topic\n' +
+        '- Need-based or general merit scholarships: score on financial need implied by working full-time while studying at a community college\n' +
+        '- Do NOT give a low score just because a scholarship topic (e.g. elder care, law, social justice) is outside the student\'s technical field — ask whether any part of the student\'s background gives them a genuine, personal reason to apply\n' +
+        '- A scholarship is only a poor fit if the student is categorically ineligible (e.g. wrong state, wrong major, specific demographic they don\'t belong to)\n\n' +
         'Scholarship listings:\n' + pasteText
 
       const full = await streamOpenRouter(
